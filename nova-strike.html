@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NOVA STRIKE</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#151b23dd;
+    --accent:#e8a33d;
+    --accent2:#3ddc84;
+    --danger:#ff4757;
+    --line:#2a3441;
+    --text:#e6edf3;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+    background:var(--bg); color:var(--text);
+    font-family:'Segoe UI',system-ui,Arial,sans-serif;
+    touch-action:none;
+  }
+  #wrap{position:fixed; inset:0;}
+  canvas{display:block; width:100%; height:100%; background:radial-gradient(ellipse at center,#1a2230 0%,#0d1117 100%);}
+
+  #hud{position:absolute; top:0; left:0; right:0; padding:10px 14px; display:flex; justify-content:space-between; align-items:flex-start; pointer-events:none; font-size:13px;}
+  .hudBox{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:6px 10px; backdrop-filter:blur(4px);}
+  #hpWrap{width:140px;}
+  #hpBar{height:10px; border-radius:6px; background:#2a3441; overflow:hidden; margin-top:4px;}
+  #hpFill{height:100%; width:100%; background:linear-gradient(90deg,#ff4757,#ffa502); transition:width .15s;}
+  #topRight{display:flex; flex-direction:column; align-items:flex-end; gap:6px;}
+  #ammoText{font-weight:700; font-size:16px; color:var(--accent);}
+  #roundText{font-weight:700;}
+  #cashText{color:var(--accent2); font-weight:700;}
+  #waveMsg{
+    position:absolute; top:40%; left:50%; transform:translate(-50%,-50%);
+    font-size:26px; font-weight:800; letter-spacing:2px; text-align:center;
+    text-shadow:0 2px 10px #000; opacity:0; pointer-events:none; transition:opacity .3s;
+  }
+
+  #joyL,#joyR{
+    position:absolute; bottom:26px; width:110px; height:110px; border-radius:50%;
+    background:#ffffff12; border:2px solid #ffffff33; touch-action:none;
+  }
+  #joyL{left:26px;}
+  #joyR{right:26px;}
+  .stick{
+    position:absolute; width:48px; height:48px; border-radius:50%;
+    background:var(--accent); left:31px; top:31px; box-shadow:0 0 12px #e8a33daa;
+    pointer-events:none;
+  }
+  #joyR .stick{background:var(--danger); box-shadow:0 0 12px #ff4757aa;}
+
+  #reloadBtn{
+    position:absolute; bottom:150px; right:36px; width:70px; height:70px; border-radius:50%;
+    background:#20293466; border:2px solid var(--line); display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:var(--text); text-align:center;
+  }
+
+  #startScreen,#shopScreen,#endScreen{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:#0d1117ee; text-align:center; padding:20px; z-index:10;
+  }
+  h1{font-size:34px; margin:0 0 4px; letter-spacing:3px; color:var(--accent);}
+  .sub{color:#8b98a5; margin-bottom:24px; font-size:14px;}
+  button{
+    font-family:inherit; font-size:15px; font-weight:700; color:#0d1117; background:var(--accent);
+    border:none; padding:14px 30px; border-radius:10px; margin:6px; cursor:pointer;
+  }
+  button.alt{background:var(--accent2);}
+  button.ghost{background:transparent; color:var(--text); border:1px solid var(--line);}
+  .weaponCard{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+    margin:8px 0; width:280px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .weaponCard.owned{border-color:var(--accent2);}
+  .weaponCard .wname{font-weight:700; text-align:left;}
+  .weaponCard .wdesc{font-size:11px; color:#8b98a5; text-align:left;}
+  .hidden{display:none !important;}
+  #shopTimer{color:var(--accent); font-weight:700; margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="hudBox" id="hpWrap">
+      <div>❤ CAN</div>
+      <div id="hpBar"><div id="hpFill"></div></div>
+    </div>
+    <div id="topRight">
+      <div class="hudBox" id="roundText">TUR 1</div>
+      <div class="hudBox" id="ammoText">7 / 7</div>
+      <div class="hudBox" id="cashText">💰 0</div>
+    </div>
+  </div>
+
+  <div id="waveMsg"></div>
+
+  <div id="joyL"><div class="stick" id="stickL"></div></div>
+  <div id="joyR"><div class="stick" id="stickR"></div></div>
+  <div id="reloadBtn">ŞARJÖR<br>DEĞİŞTİR</div>
+
+  <div id="startScreen">
+    <h1>NOVA STRIKE</h1>
+    <div class="sub">Taktik Timli Çatışma — Turları hayatta kal, silah al, düşmanları temizle.</div>
+    <button id="btnStart">OYUNA BAŞLA</button>
+    <div class="sub" style="margin-top:18px; max-width:280px;">
+      Sol joystick: hareket &nbsp;|&nbsp; Sağ joystick: nişan al &amp; ateş et<br>
+      Parmağını bırakınca ateş kesilir.
+    </div>
+  </div>
+
+  <div id="shopScreen" class="hidden">
+    <h1 style="font-size:22px;">SATIN ALMA</h1>
+    <div id="shopTimer">Sonraki tur: 8</div>
+    <div id="shopCash" class="sub">💰 0</div>
+    <div id="shopList"></div>
+    <button id="btnNextRound" class="alt">TURA BAŞLA</button>
+  </div>
+
+  <div id="endScreen" class="hidden">
+    <h1 id="endTitle">GÖREV TAMAM</h1>
+    <div class="sub" id="endSub"></div>
+    <button id="btnRestart">TEKRAR OYNA</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+  resize(); addEventListener('resize', resize);
+
+  // ---------- WEAPONS ----------
+  const WEAPONS = {
+    pistol: {name:"Tabanca", desc:"Sonsuz mühimmat, düşük hasar", dmg:12, mag:7, fireDelay:260, reload:700, spread:0.05, range:520, price:0, bulletSpeed:900, color:"#f1c40f"},
+    rifle:  {name:"Hücum Tüfeği", desc:"Yüksek hasar, hızlı ateş", dmg:22, mag:24, fireDelay:120, reload:1200, spread:0.09, range:650, price:650, bulletSpeed:1100, color:"#ff7f50"},
+    sniper: {name:"Keskin Nişancı", desc:"Tek atımda büyük hasar", dmg:85, mag:5, fireDelay:650, reload:1500, spread:0.01, range:1100, price:1400, bulletSpeed:1600, color:"#7bd3ff"}
+  };
+  const ownedWeapons = {pistol:true, rifle:false, sniper:false};
+  let currentWeaponKey = 'pistol';
+
+  // ---------- STATE ----------
+  let state = 'menu'; // menu, playing, shop, dead, cleared
+  let player, bullets, enemyBullets, enemies, particles;
+  let round = 1, cash = 0, lastShot = 0, ammo, reloading=false, reloadStart=0;
+  const MAX_ROUND = 8;
+
+  function resetGame(){
+    player = { x: innerWidth/2, y: innerHeight/2, r: 16, hp:100, maxHp:100, speed:230, angle:0 };
+    bullets = []; enemyBullets = []; enemies = []; particles = [];
+    round = 1; cash = 0;
+    ownedWeapons.pistol = true; ownedWeapons.rifle=false; ownedWeapons.sniper=false;
+    currentWeaponKey = 'pistol';
+    ammo = WEAPONS.pistol.mag;
+    reloading = false;
+    updateHud();
+  }
+
+  // ---------- JOYSTICKS ----------
+  function makeJoystick(zoneEl, stickEl, onMove, onEnd){
+    let active=false, id=null, cx=0, cy=0, maxDist=40;
+    function start(e){
+      const t = e.changedTouches ? e.changedTouches[0] : e;
+      active = true; id = t.identifier ?? 'mouse';
+      const rect = zoneEl.getBoundingClientRect();
+      cx = rect.left + rect.width/2; cy = rect.top + rect.height/2;
+      handle(t);
+      e.preventDefault();
+    }
+    function handle(t){
+      let dx = t.clientX - cx, dy = t.clientY - cy;
+      const dist = Math.hypot(dx,dy);
+      if(dist > maxDist){ dx = dx/dist*maxDist; dy = dy/dist*maxDist; }
+      stickEl.style.left = (31+dx)+'px'; stickEl.style.top = (31+dy)+'px';
+      onMove(dx/maxDist, dy/maxDist);
+    }
+    function move(e){
+      if(!active) return;
+      const touches = e.changedTouches ? Array.from(e.changedTouches) : [e];
+      for(const t of touches){ if((t.identifier ?? 'mouse') === id) handle(t); }
+      e.preventDefault();
+    }
+    function end(e){
+      const touches = e.changedTouches ? Array.from(e.changedTouches) : [e];
+      for(const t of touches){ if((t.identifier ?? 'mouse') === id){
+        active=false; id=null;
+        stickEl.style.left='31px'; stickEl.style.top='31px';
+        onEnd && onEnd();
+      }}
+    }
+    zoneEl.addEventListener('touchstart', start, {passive:false});
+    zoneEl.addEventListener('touchmove', move, {passive:false});
+    zoneEl.addEventListener('touchend', end);
+    zoneEl.addEventListener('touchcancel', end);
+    zoneEl.addEventListener('mousedown', start);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+  }
+
+  let moveVec = {x:0,y:0};
+  let aimVec = {x:0,y:0};
+  let aiming = false;
+
+  makeJoystick(document.getElementById('joyL'), document.getElementById('stickL'),
+    (nx,ny)=>{ moveVec.x=nx; moveVec.y=ny; },
+    ()=>{ moveVec.x=0; moveVec.y=0; }
+  );
+  makeJoystick(document.getElementById('joyR'), document.getElementById('stickR'),
+    (nx,ny)=>{ aimVec.x=nx; aimVec.y=ny; aiming = Math.hypot(nx,ny) > 0.25; if(aiming) player.angle = Math.atan2(ny,nx); },
+    ()=>{ aiming=false; }
+  );
+
+  document.getElementById('reloadBtn').addEventListener('touchstart', (e)=>{ e.preventDefault(); startReload(); });
+  document.getElementById('reloadBtn').addEventListener('mousedown', startReload);
+
+  function startReload(){
+    if(state!=='playing') return;
+    const w = WEAPONS[currentWeaponKey];
+    if(reloading || ammo === w.mag) return;
+    reloading = true; reloadStart = performance.now();
+  }
+
+  // ---------- COMBAT ----------
+  function tryShoot(now){
+    if(state!=='playing' || !aiming || reloading) return;
+    const w = WEAPONS[currentWeaponKey];
+    if(ammo <= 0){ startReload(); return; }
+    if(now - lastShot < w.fireDelay) return;
+    lastShot = now;
+    ammo--;
+    const spread = (Math.random()-0.5)*w.spread*2;
+    const a = player.angle + spread;
+    bullets.push({
+      x: player.x + Math.cos(player.angle)*20, y: player.y + Math.sin(player.angle)*20,
+      vx: Math.cos(a)*w.bulletSpeed, vy: Math.sin(a)*w.bulletSpeed,
+      dmg: w.dmg, life: w.range/w.bulletSpeed, color: w.color
+    });
+    if(ammo === 0) startReload();
+    updateHud();
+  }
+
+  function spawnEnemy(){
+    const edge = Math.floor(Math.random()*4);
+    let x,y;
+    const W=innerWidth, H=innerHeight;
+    if(edge===0){ x=-30; y=Math.random()*H; }
+    else if(edge===1){ x=W+30; y=Math.random()*H; }
+    else if(edge===2){ x=Math.random()*W; y=-30; }
+    else { x=Math.random()*W; y=H+30; }
+    const hpBonus = 1 + (round-1)*0.22;
+    const speedBonus = 1 + (round-1)*0.06;
+    const ranged = Math.random() < Math.min(0.15 + round*0.05, 0.55);
+    enemies.push({
+      x,y, r:15, hp: Math.round(28*hpBonus), maxHp: Math.round(28*hpBonus),
+      speed: (ranged? 70:95)*speedBonus, ranged, lastShot:0, fireDelay: 1400 - Math.min(round*60,700)
+    });
+  }
+
+  let enemiesToSpawn = 0, spawnTimer = 0;
+  function startRound(){
+    state = 'playing';
+    document.getElementById('shopScreen').classList.add('hidden');
+    enemiesToSpawn = 4 + round*2;
+    spawnTimer = 0;
+    showWaveMsg('TUR ' + round);
+    updateHud();
+  }
+
+  function showWaveMsg(text){
+    const el = document.getElementById('waveMsg');
+    el.textContent = text; el.style.opacity = 1;
+    setTimeout(()=>{ el.style.opacity = 0; }, 1300);
+  }
+
+  function endRound(){
+    state = 'shop';
+    cash += 150 + round*30;
+    openShop();
+  }
+
+  function openShop(){
+    document.getElementById('shopScreen').classList.remove('hidden');
+    document.getElementById('shopCash').textContent = '💰 ' + cash;
+    renderShop();
+    let t = 8;
+    document.getElementById('shopTimer').textContent = 'Sonraki tur: ' + t;
+    clearInterval(window._shopInt);
+    window._shopInt = setInterval(()=>{
+      t--;
+      document.getElementById('shopTimer').textContent = 'Sonraki tur: ' + t;
+      if(t<=0){ clearInterval(window._shopInt); nextRound(); }
+    },1000);
+  }
+
+  function renderShop(){
+    const list = document.getElementById('shopList');
+    list.innerHTML = '';
+    Object.keys(WEAPONS).forEach(key=>{
+      const w = WEAPONS[key];
+      const owned = ownedWeapons[key];
+      const card = document.createElement('div');
+      card.className = 'weaponCard' + (owned? ' owned':'');
+      card.innerHTML = `<div><div class="wname">${w.name} ${currentWeaponKey===key?'✅':''}</div><div class="wdesc">${w.desc}</div></div>`;
+      const btn = document.createElement('button');
+      btn.className = owned? 'ghost':'';
+      btn.textContent = owned ? (currentWeaponKey===key? 'Kuşanıldı':'Kuşan') : ('Al 💰'+w.price);
+      btn.onclick = ()=>{
+        if(!owned){
+          if(cash >= w.price){ cash -= w.price; ownedWeapons[key]=true; currentWeaponKey=key; ammo=w.mag; }
+        } else {
+          currentWeaponKey = key; ammo = w.mag;
+        }
+        document.getElementById('shopCash').textContent = '💰 ' + cash;
+        renderShop();
+        updateHud();
+      };
+      card.appendChild(btn);
+      list.appendChild(card);
+    });
+  }
+
+  function nextRound(){
+    round++;
+    if(round > MAX_ROUND){ gameWin(); return; }
+    document.getElementById('shopScreen').classList.add('hidden');
+    reloading=false;
+    startRound();
+  }
+  document.getElementById('btnNextRound').addEventListener('click', ()=>{ clearInterval(window._shopInt); nextRound(); });
+
+  function gameWin(){
+    state='cleared';
+    document.getElementById('endTitle').textContent = '✅ HARİTA TEMİZLENDİ';
+    document.getElementById('endSub').textContent = 'Tüm turları tamamladın! Toplam para: ' + cash;
+    document.getElementById('endScreen').classList.remove('hidden');
+  }
+  function gameOver(){
+    state='dead';
+    document.getElementById('endTitle').textContent = '💀 ELENDİN';
+    document.getElementById('endSub').textContent = 'Tur ' + round + "'de düştün. Toplanan para: " + cash;
+    document.getElementById('endScreen').classList.remove('hidden');
+  }
+
+  // ---------- UPDATE ----------
+  function updateHud(){
+    document.getElementById('hpFill').style.width = Math.max(0,(player.hp/player.maxHp*100)) + '%';
+    document.getElementById('roundText').textContent = 'TUR ' + round + ' / ' + MAX_ROUND;
+    const w = WEAPONS[currentWeaponKey];
+    document.getElementById('ammoText').textContent = (reloading? 'DOLDURULUYOR…' : ammo + ' / ' + w.mag) + '  (' + w.name + ')';
+    document.getElementById('cashText').textContent = '💰 ' + cash;
+  }
+
+  let lastTime = performance.now();
+  function loop(now){
+    const dt = Math.min((now-lastTime)/1000, 0.05);
+    lastTime = now;
+    if(state==='playing') update(dt, now);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function update(dt, now){
+    const w = WEAPONS[currentWeaponKey];
+    // reload complete
+    if(reloading && now - reloadStart >= w.reload){
+      reloading = false; ammo = w.mag; updateHud();
+    }
+    // move player
+    const mlen = Math.hypot(moveVec.x, moveVec.y);
+    if(mlen > 0.15){
+      player.x += moveVec.x * player.speed * dt;
+      player.y += moveVec.y * player.speed * dt;
+      if(!aiming) player.angle = Math.atan2(moveVec.y, moveVec.x);
+    }
+    player.x = Math.max(20, Math.min(innerWidth-20, player.x));
+    player.y = Math.max(20, Math.min(innerHeight-20, player.y));
+
+    tryShoot(now);
+
+    // spawn enemies gradually
+    if(enemiesToSpawn > 0){
+      spawnTimer -= dt;
+      if(spawnTimer <= 0){
+        spawnEnemy(); enemiesToSpawn--;
+        spawnTimer = Math.max(0.35, 1.1 - round*0.06);
+      }
+    }
+
+    // bullets
+    for(let i=bullets.length-1;i>=0;i--){
+      const b = bullets[i];
+      b.x += b.vx*dt; b.y += b.vy*dt; b.life -= dt;
+      if(b.life<=0 || b.x<-50||b.x>innerWidth+50||b.y<-50||b.y>innerHeight+50){ bullets.splice(i,1); continue; }
+      for(let j=enemies.length-1;j>=0;j--){
+        const e = enemies[j];
+        if(Math.hypot(b.x-e.x,b.y-e.y) < e.r+4){
+          e.hp -= b.dmg;
+          spawnParticles(b.x,b.y,'#ffcf6b',4);
+          bullets.splice(i,1);
+          if(e.hp<=0){
+            cash += 18 + round*2;
+            spawnParticles(e.x,e.y,'#ff6b6b',14);
+            enemies.splice(j,1);
+            updateHud();
+          }
+          break;
+        }
+      }
+    }
+
+    // enemy bullets
+    for(let i=enemyBullets.length-1;i>=0;i--){
+      const b = enemyBullets[i];
+      b.x += b.vx*dt; b.y += b.vy*dt; b.life -= dt;
+      if(b.life<=0){ enemyBullets.splice(i,1); continue; }
+      if(Math.hypot(b.x-player.x,b.y-player.y) < player.r+3){
+        player.hp -= b.dmg; enemyBullets.splice(i,1);
+        spawnParticles(player.x,player.y,'#ff4757',8);
+        updateHud();
+        if(player.hp<=0){ gameOver(); }
+      }
+    }
+
+    // enemies
+    for(const e of enemies){
+      const dx = player.x-e.x, dy = player.y-e.y, dist = Math.hypot(dx,dy)||1;
+      const desired = e.ranged ? 260 : 26;
+      if(dist > desired){
+        e.x += dx/dist*e.speed*dt; e.y += dy/dist*e.speed*dt;
+      } else if(dist < desired-20){
+        e.x -= dx/dist*e.speed*dt*0.6; e.y -= dy/dist*e.speed*dt*0.6;
+      }
+      if(!e.ranged && dist < e.r+player.r+4){
+        player.hp -= 22*dt;
+        updateHud();
+        if(player.hp<=0) gameOver();
+      }
+      if(e.ranged && dist < 500){
+        if(now - e.lastShot > e.fireDelay){
+          e.lastShot = now;
+          const a = Math.atan2(dy,dx) + (Math.random()-0.5)*0.15;
+          enemyBullets.push({x:e.x,y:e.y,vx:Math.cos(a)*480,vy:Math.sin(a)*480,dmg:9,life:1.6});
+        }
+      }
+    }
+
+    // particles
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.x += p.vx*dt; p.y += p.vy*dt; p.life -= dt; p.vx*=0.9; p.vy*=0.9;
+      if(p.life<=0) particles.splice(i,1);
+    }
+
+    // round clear check
+    if(enemiesToSpawn<=0 && enemies.length===0 && state==='playing'){
+      endRound();
+    }
+  }
+
+  function spawnParticles(x,y,color,n){
+    for(let i=0;i<n;i++){
+      const a = Math.random()*Math.PI*2, s = 60+Math.random()*180;
+      particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.4+Math.random()*0.3,color});
+    }
+  }
+
+  // ---------- RENDER ----------
+  function render(){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    // grid floor
+    ctx.strokeStyle = '#1c2530'; ctx.lineWidth=1;
+    const g=60;
+    for(let x=0;x<innerWidth;x+=g){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,innerHeight);ctx.stroke(); }
+    for(let y=0;y<innerHeight;y+=g){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(innerWidth,y);ctx.stroke(); }
+
+    if(state==='menu') return;
+
+    // particles
+    for(const p of particles){
+      ctx.globalAlpha = Math.max(p.life,0);
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    // bullets
+    for(const b of bullets){
+      ctx.fillStyle = b.color;
+      ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill();
+    }
+    for(const b of enemyBullets){
+      ctx.fillStyle = '#ff4757';
+      ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill();
+    }
+
+    // enemies
+    for(const e of enemies){
+      ctx.save();
+      ctx.translate(e.x,e.y);
+      ctx.fillStyle = e.ranged ? '#c0392b' : '#8e2626';
+      ctx.beginPath(); ctx.arc(0,0,e.r,0,7); ctx.fill();
+      ctx.strokeStyle = '#000a'; ctx.lineWidth=2; ctx.stroke();
+      // hp bar
+      ctx.restore();
+      ctx.fillStyle='#000a'; ctx.fillRect(e.x-16,e.y-e.r-12,32,5);
+      ctx.fillStyle='#ff4757'; ctx.fillRect(e.x-16,e.y-e.r-12,32*(e.hp/e.maxHp),5);
+    }
+
+    // player
+    if(player){
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.rotate(player.angle);
+      ctx.fillStyle = '#3ddc84';
+      ctx.beginPath(); ctx.arc(0,0,player.r,0,7); ctx.fill();
+      ctx.strokeStyle='#0d1117'; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle = '#e8a33d';
+      ctx.fillRect(10,-4,20,8);
+      ctx.restore();
+    }
+  }
+
+  requestAnimationFrame(loop);
+
+  // ---------- SCREEN FLOW ----------
+  document.getElementById('btnStart').addEventListener('click', ()=>{
+    document.getElementById('startScreen').classList.add('hidden');
+    resetGame();
+    startRound();
+  });
+  document.getElementById('btnRestart').addEventListener('click', ()=>{
+    document.getElementById('endScreen').classList.add('hidden');
+    resetGame();
+    startRound();
+  });
+})();
+</script>
+</body>
+</html>
